@@ -1,0 +1,141 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAX 100
+
+// Structures for tables
+typedef struct {
+    char name[20];
+    int mdtIndex;
+} MNT;
+
+typedef struct {
+    char line[100];
+} MDT;
+
+MNT mnt[MAX];
+MDT mdt[MAX];
+
+int mntc = 0, mdtc = 0;
+
+// PASS 1: Build MNT & MDT
+void pass1(FILE *fp) {
+    char line[100], word[20];
+
+    while (fgets(line, sizeof(line), fp)) {
+        sscanf(line, "%s", word);
+
+        if (strcmp(word, "MACRO") == 0) {
+            // Read macro name
+            fgets(line, sizeof(line), fp);
+            sscanf(line, "%s", word);
+
+            strcpy(mnt[mntc].name, word);
+            mnt[mntc].mdtIndex = mdtc;
+            mntc++;
+
+            // Read macro body
+            while (1) {
+                fgets(line, sizeof(line), fp);
+                strcpy(mdt[mdtc].line, line);
+                mdtc++;
+
+                if (strncmp(line, "MEND", 4) == 0)
+                    break;
+            }
+        }
+    }
+
+    printf("\n--- PASS 1 COMPLETE ---\n");
+
+    // Print MNT
+    printf("\nMNT:\n");
+    for (int i = 0; i < mntc; i++) {
+        printf("%s -> %d\n", mnt[i].name, mnt[i].mdtIndex);
+    }
+
+    // Print MDT
+    printf("\nMDT:\n");
+    for (int i = 0; i < mdtc; i++) {
+        printf("%d: %s", i, mdt[i].line);
+    }
+}
+
+// PASS 2: Expand macros
+void pass2(FILE *fp, FILE *fout) {
+    char line[100], word[20];
+
+    rewind(fp);
+
+    while (fgets(line, sizeof(line), fp)) {
+        sscanf(line, "%s", word);
+
+        int found = -1;
+
+        // Check in MNT
+        for (int i = 0; i < mntc; i++) {
+            if (strcmp(word, mnt[i].name) == 0) {
+                found = i;
+                break;
+            }
+        }
+
+        if (found != -1) {
+            int index = mnt[found].mdtIndex;
+
+            // Expand macro
+            while (1) {
+                if (strncmp(mdt[index].line, "MEND", 4) == 0)
+                    break;
+
+                fprintf(fout, "%s", mdt[index].line);
+                index++;
+            }
+        } else if (strcmp(word, "MACRO") == 0) {
+            // Skip macro definition in pass 2
+            while (fgets(line, sizeof(line), fp)) {
+                if (strncmp(line, "MEND", 4) == 0)
+                    break;
+            }
+        } else {
+            fprintf(fout, "%s", line);
+        }
+    }
+
+    printf("\n--- PASS 2 COMPLETE ---\n");
+}
+
+int main() {
+    FILE *fp, *fout;
+
+    fp = fopen("input.txt", "r");
+    fout = fopen("output.txt", "w");
+
+    if (!fp || !fout) {
+        printf("File error!\n");
+        return 1;
+    }
+
+    pass1(fp);
+    pass2(fp, fout);
+
+    fclose(fp);
+    fclose(fout);
+
+    printf("\nOutput written to output.txt\n");
+
+    return 0;
+}
+
+sample input
+MACRO
+INCR
+LDA A
+ADD B
+STA A
+MEND
+
+START
+INCR
+END
