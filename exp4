@@ -1,0 +1,68 @@
+#include <stdio.h>
+#include <string.h>
+
+char stack[50], input[50];
+int top = -1;
+
+void push(char c) {
+    stack[++top] = c;
+}
+
+void pop(int n) {
+    top -= n;
+}
+
+void display() {
+    for (int i = 0; i <= top; i++)
+        printf("%c", stack[i]);
+}
+
+int main() {
+    int i = 0;
+    printf("Enter input string (use i for id): ");
+    scanf("%s", input);
+
+    printf("\nStack\tInput\tAction\n");
+
+    while (1) {
+        printf("\n");
+        display();
+        printf("\t%s\t", input + i);
+
+        // SHIFT
+        if (input[i] != '\0') {
+            push(input[i]);
+            printf("Shift");
+            i++;
+        }
+
+        // REDUCE rules
+        if (top >= 2 && stack[top] == 'i') {
+            stack[top] = 'E';
+            printf("\tReduce: E->i");
+        }
+
+        if (top >= 2 && stack[top] == 'E' && stack[top-1] == '+' && stack[top-2] == 'E') {
+            pop(2);
+            stack[top] = 'E';
+            printf("\tReduce: E->E+E");
+        }
+
+        if (top >= 2 && stack[top] == 'E' && stack[top-1] == '*' && stack[top-2] == 'E') {
+            pop(2);
+            stack[top] = 'E';
+            printf("\tReduce: E->E*E");
+        }
+
+        // ACCEPT
+        if (stack[top] == 'E' && input[i] == '\0' && top == 0) {
+            printf("\nAccepted\n");
+            break;
+        }
+
+        if (input[i] == '\0' && top != 0) {
+            printf("\nRejected\n");
+            break;
+        }
+    }
+}
